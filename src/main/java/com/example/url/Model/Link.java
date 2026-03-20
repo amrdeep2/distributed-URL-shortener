@@ -35,6 +35,8 @@ public class Link {
     @Column(name = "is_active", nullable = false)
     private boolean isActive;
 
+
+
     public Link() {
     }
 

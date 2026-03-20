@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>URL Shortener</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        }
+
+        h1, h2 {
+            margin-top: 0;
+        }
+
+        .muted {
+            color: #94a3b8;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #e2e8f0;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #38bdf8;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        button {
+            border: none;
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .primary {
+            background: #38bdf8;
+            color: #0f172a;
+        }
+
+        .secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .result, .error {
+            margin-top: 18px;
+            padding: 14px;
+            border-radius: 12px;
+        }
+
+        .result {
+            background: #132f1d;
+            border: 1px solid #166534;
+        }
+
+        .error {
+            background: #3b0d0d;
+            border: 1px solid #b91c1c;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-top: 16px;
+        }
+
+        .stat-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .stat-title {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .link-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+
+        a {
+            color: #38bdf8;
+            word-break: break-all;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="card">
+        <h1>🔗 URL Shortener</h1>
+        <p class="muted">Create short URLs, view stats, and list all links.</p>
+
+        <div class="form-group">
+            <label for="longUrl">Long URL</label>
+            <input id="longUrl" type="text" placeholder="https://example.com/very/long/link" />
+        </div>
+
+        <div class="form-group">
+            <label for="customAlias">Custom Alias (optional)</label>
+            <input id="customAlias" type="text" placeholder="my-link" />
+        </div>
+
+        <div class="form-group">
+            <label for="expiresAt">Expires At (optional)</label>
+            <input id="expiresAt" type="text" placeholder="2026-12-31T00:00:00" />
+        </div>
+
+        <div class="buttons">
+            <button class="primary" onclick="createLink()">Create Link</button>
+            <button class="secondary" onclick="loadStats()">See Stats</button>
+            <button class="secondary" onclick="loadLinks()">See All Links</button>
+            <button class="secondary" onclick="clearForm()">Clear</button>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <div id="statsSection" class="card hidden">
+        <h2>Stats</h2>
+        <div id="statsContent" class="muted">No stats loaded yet.</div>
+    </div>
+
+    <div id="linksSection" class="card hidden">
+        <h2>All Links</h2>
+        <div id="linksContent" class="muted">No links loaded yet.</div>
+    </div>
+
+</div>
+
+<script>
+    const CREATE_ENDPOINT = "/";
+    const STATS_ENDPOINT = "/api/stats";
+    const LINKS_ENDPOINT = "/api/links";
+
+    function clearForm() {
+        document.getElementById("longUrl").value = "";
+        document.getElementById("customAlias").value = "";
+        document.getElementById("expiresAt").value = "";
+        clearMessage();
+    }
+
+    function clearMessage() {
+        const box = document.getElementById("message");
+        box.className = "";
+        box.innerHTML = "";
+    }
+
+    function showMessage(type, html) {
+        const box = document.getElementById("message");
+        box.className = type;
+        box.innerHTML = html;
+    }
+
+    async function createLink() {
+        clearMessage();
+
+        const longUrl = document.getElementById("longUrl").value.trim();
+        const customAlias = document.getElementById("customAlias").value.trim();
+        const expiresAt = document.getElementById("expiresAt").value.trim();
+
+        const body = {
+            longUrl: longUrl
+        };
+
+        if (customAlias) {
+            body.customAlias = customAlias;
+        }
+
+        if (expiresAt) {
+            body.expiresAt = expiresAt;
+        }
+
+        try {
+            const response = await fetch(CREATE_ENDPOINT, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(body)
+            });
+
+            const contentType = response.headers.get("content-type") || "";
+            const data = contentType.includes("application/json")
+                ? await response.json()
+                : await response.text();
+
+            if (!response.ok) {
+                const message = typeof data === "object"
+                    ? (data.message || JSON.stringify(data))
+                    : data;
+
+                showMessage("error", `<strong>Error:</strong> ${message}`);
+                return;
+            }
+
+            showMessage(
+                "result",
+                `
+                <div><strong>Code:</strong> ${data.code}</div>
+                <div><strong>Short URL:</strong> <a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a></div>
+                <div><strong>Original URL:</strong> ${data.longUrl}</div>
+                <div><strong>Expires At:</strong> ${data.expiresAt || "No expiry"}</div>
+                <div style="margin-top:12px;">
+                    <button class="secondary" onclick="copyToClipboard('${data.shortUrl}')">Copy Short URL</button>
+                </div>
+                `
+            );
+
+            loadStats();
+            loadLinks();
+        } catch (error) {
+            showMessage("error", `<strong>Error:</strong> ${error.message}`);
+        }
+    }
+
+    async function loadStats() {
+        const section = document.getElementById("statsSection");
+        const content = document.getElementById("statsContent");
+        section.classList.remove("hidden");
+        content.innerHTML = "Loading stats...";
+
+        try {
+            const response = await fetch(STATS_ENDPOINT);
+            const data = await response.json();
+
+            content.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-title">Total Links</div>
+                        <div class="stat-value">${data.totalLinks ?? 0}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-title">Active Links</div>
+                        <div class="stat-value">${data.activeLinks ?? 0}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-title">Expired Links</div>
+                        <div class="stat-value">${data.expiredLinks ?? 0}</div>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            content.innerHTML = `<div class="error"><strong>Failed to load stats:</strong> ${error.message}</div>`;
+        }
+    }
+
+    async function loadLinks() {
+        const section = document.getElementById("linksSection");
+        const content = document.getElementById("linksContent");
+        section.classList.remove("hidden");
+        content.innerHTML = "Loading links...";
+
+        try {
+            const response = await fetch(LINKS_ENDPOINT);
+            const data = await response.json();
+
+            if (!Array.isArray(data) || data.length === 0) {
+                content.innerHTML = `<div class="muted">No links found.</div>`;
+                return;
+            }
+
+            content.innerHTML = data.map(link => `
+                <div class="link-card">
+                    <div><strong>Code:</strong> ${link.code}</div>
+                    <div><strong>Short URL:</strong> <a href="/${link.code}" target="_blank">${window.location.origin}/${link.code}</a></div>
+                    <div><strong>Long URL:</strong> <a href="${link.longUrl}" target="_blank">${link.longUrl}</a></div>
+                    <div><strong>Created At:</strong> ${link.createdAt || "N/A"}</div>
+                    <div><strong>Expires At:</strong> ${link.expiresAt || "No expiry"}</div>
+                    <div><strong>Active:</strong> ${link.active ?? link.isActive}</div>
+                </div>
+            `).join("");
+        } catch (error) {
+            content.innerHTML = `<div class="error"><strong>Failed to load links:</strong> ${error.message}</div>`;
+        }
+    }
+
+    async function copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            alert("Copied to clipboard");
+        } catch (error) {
+            alert("Failed to copy");
+        }
+    }
+</script>
+</body>
+</html>
