@@ -2,10 +2,14 @@ package com.example.url.Controller;
 
 import com.example.url.Dtos.RequestDto;
 import com.example.url.Dtos.ResponseDto;
+import com.example.url.Dtos.StatsDto;
+import com.example.url.Model.Link;
 import com.example.url.Service.Service;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 public class TestController {
@@ -14,11 +18,11 @@ public class TestController {
         this.linkService = service;
 
     }
-
     @GetMapping("/")
-    public String home() {
-        return "URL Shortener is running 🚀";
+    public String home(){
+        return "Url is working go to index.html";
     }
+
     @PostMapping("/")
     public ResponseDto createURL(@RequestBody RequestDto dto, HttpServletRequest request){
         String ip = request.getRemoteAddr();
@@ -35,4 +39,16 @@ public class TestController {
                 .status(302)
                 .header("Location", longUrl)
                 .build();
-    } }
+    }
+    @GetMapping("/api/links")
+    public List<Link> getAllLinks() {
+        return linkService.getAllLinks();
+        }
+
+
+    @GetMapping("/api/stats")
+    public StatsDto getStats() {
+        return linkService.getStats();
+    }
+
+    }

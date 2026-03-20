@@ -2,6 +2,7 @@ package com.example.url.Service;
 
 import com.example.url.Dtos.RequestDto;
 import com.example.url.Dtos.ResponseDto;
+import com.example.url.Dtos.StatsDto;
 import com.example.url.LinkRepository.LinkRepository;
 import com.example.url.Model.Link;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -9,6 +10,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import java.time.Duration;
 import java.time.LocalDateTime;
 //import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 @org.springframework.stereotype.Service
@@ -145,6 +147,20 @@ public class Service {
             throw new RuntimeException("Too many requests");
         }
     }
+    public List<Link> getAllLinks() {
+        return repo.findAll();
     }
+    public StatsDto getStats() {
+
+        long total = repo.count();
+
+        long active = repo.countByIsActiveTrue();
+
+        long expired = repo.countByExpiresAtBefore(LocalDateTime.now());
+
+        return new StatsDto(total, active, expired);
+    }
+
+}
 
 
