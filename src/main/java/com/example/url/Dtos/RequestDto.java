@@ -1,10 +1,14 @@
 package com.example.url.Dtos;
 
+import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDateTime;
 
 public class RequestDto {
+    @NotNull
     private String longUrl;
     private String customAlias;
+    private LocalDateTime expiresAt;
 
     public LocalDateTime getExpiresAt() {
         return expiresAt;
@@ -30,6 +34,5 @@ public class RequestDto {
         this.longUrl = longUrl;
     }
 
-    private LocalDateTime expiresAt;
 
 }

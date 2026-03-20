@@ -6,6 +6,7 @@ public class ResponseDto {
     private String code;
     private String shortUrl;
     private String longUrl;
+    private LocalDateTime expiresAt;
     public ResponseDto(String code, String shortUrl, String longUrl, LocalDateTime expiresAt) {
         this.code = code;
         this.shortUrl = shortUrl;
@@ -45,5 +46,5 @@ public class ResponseDto {
         this.code = code;
     }
 
-    private LocalDateTime expiresAt;
+
 }

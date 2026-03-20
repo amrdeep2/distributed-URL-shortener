@@ -3,6 +3,7 @@ package com.example.url.Controller;
 import com.example.url.Dtos.RequestDto;
 import com.example.url.Dtos.ResponseDto;
 import com.example.url.Service.Service;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,8 +20,9 @@ public class TestController {
         return "URL Shortener is running 🚀";
     }
     @PostMapping("/")
-    public ResponseDto createURL(@RequestBody RequestDto dto){
-        return linkService.createLink(dto);
+    public ResponseDto createURL(@RequestBody RequestDto dto, HttpServletRequest request){
+        String ip = request.getRemoteAddr();
+        return linkService.createLink(dto,ip);
 
     }
 
