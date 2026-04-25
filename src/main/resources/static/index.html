@@ -128,6 +128,33 @@
             font-weight: bold;
         }
 
+        .analysis-list {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .analysis-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .analysis-row:last-child {
+            border-bottom: none;
+        }
+
+        .analysis-label {
+            color: #94a3b8;
+        }
+
+        .analysis-value {
+            font-weight: bold;
+            text-align: right;
+        }
+
         .link-card {
             background: #0f172a;
             border: 1px solid #334155;
@@ -165,12 +192,13 @@
 
         <div class="form-group">
             <label for="expiresAt">Expires At (optional)</label>
-            <input id="expiresAt" type="text" placeholder="2026-12-31T00:00:00" />
+            <input id="expiresAt" type="datetime-local" />
         </div>
 
         <div class="buttons">
             <button class="primary" onclick="createLink()">Create Link</button>
             <button class="secondary" onclick="loadStats()">See Stats</button>
+            <button class="secondary" onclick="loadAnalysis()">Analysis</button>
             <button class="secondary" onclick="loadLinks()">See All Links</button>
             <button class="secondary" onclick="clearForm()">Clear</button>
         </div>
@@ -181,6 +209,11 @@
     <div id="statsSection" class="card hidden">
         <h2>Stats</h2>
         <div id="statsContent" class="muted">No stats loaded yet.</div>
+    </div>
+
+    <div id="analysisSection" class="card hidden">
+        <h2>Analysis</h2>
+        <div id="analysisContent" class="muted">No analysis loaded yet.</div>
     </div>
 
     <div id="linksSection" class="card hidden">
@@ -270,6 +303,7 @@
             );
 
             loadStats();
+            loadAnalysis();
             loadLinks();
         } catch (error) {
             showMessage("error", `<strong>Error:</strong> ${error.message}`);
@@ -307,6 +341,76 @@
         }
     }
 
+    async function loadAnalysis() {
+        const section = document.getElementById("analysisSection");
+        const content = document.getElementById("analysisContent");
+        section.classList.remove("hidden");
+        content.innerHTML = "Loading analysis...";
+
+        try {
+            const [statsResponse, linksResponse] = await Promise.all([
+                fetch(STATS_ENDPOINT),
+                fetch(LINKS_ENDPOINT)
+            ]);
+
+            const stats = await statsResponse.json();
+            const links = await linksResponse.json();
+            const list = Array.isArray(links) ? links : [];
+            const now = new Date();
+            const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            const permanentLinks = list.filter(link => !link.expiresAt).length;
+            const expiringSoon = list.filter(link => {
+                if (!link.expiresAt) {
+                    return false;
+                }
+
+                const expiresAt = new Date(link.expiresAt);
+                return expiresAt > now && expiresAt <= sevenDaysFromNow;
+            }).length;
+            const activeLinks = stats.activeLinks ?? 0;
+            const totalLinks = stats.totalLinks ?? list.length;
+            const activePercent = totalLinks === 0
+                ? 0
+                : Math.round((activeLinks / totalLinks) * 100);
+            const latestLink = list
+                .slice()
+                .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0];
+
+            content.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-title">Active Rate</div>
+                        <div class="stat-value">${activePercent}%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-title">Permanent Links</div>
+                        <div class="stat-value">${permanentLinks}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-title">Expiring Soon</div>
+                        <div class="stat-value">${expiringSoon}</div>
+                    </div>
+                </div>
+                <div class="analysis-list">
+                    <div class="analysis-row">
+                        <span class="analysis-label">Total links created</span>
+                        <span class="analysis-value">${totalLinks}</span>
+                    </div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">Expired links</span>
+                        <span class="analysis-value">${stats.expiredLinks ?? 0}</span>
+                    </div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">Latest code</span>
+                        <span class="analysis-value">${latestLink?.code || "None yet"}</span>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            content.innerHTML = `<div class="error"><strong>Failed to load analysis:</strong> ${error.message}</div>`;
+        }
+    }
+
     async function loadLinks() {
         const section = document.getElementById("linksSection");
         const content = document.getElementById("linksContent");
@@ -325,7 +429,7 @@
             content.innerHTML = data.map(link => `
                 <div class="link-card">
                     <div><strong>Code:</strong> ${link.code}</div>
-                    <div><strong>Short URL:</strong> <a href="/${link.code}" target="_blank">${window.location.origin}/${link.code}</a></div>
+                    <div><strong>Short URL:</strong> <a href="/api/${link.code}" target="_blank">${window.location.origin}/api/${link.code}</a></div>
                     <div><strong>Long URL:</strong> <a href="${link.longUrl}" target="_blank">${link.longUrl}</a></div>
                     <div><strong>Created At:</strong> ${link.createdAt || "N/A"}</div>
                     <div><strong>Expires At:</strong> ${link.expiresAt || "No expiry"}</div>

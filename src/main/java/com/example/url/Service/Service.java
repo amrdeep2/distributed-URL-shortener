@@ -30,8 +30,6 @@ public class Service {
         System.out.println("RATE LIMIT CHECK CALLED, ip = " + ip);
         String longUrl = dto.getLongUrl() != null ? dto.getLongUrl().trim() : null;
         String customAlias = dto.getCustomAlias() != null ? dto.getCustomAlias().trim() : null;
-        LocalDateTime expiresAtText = dto.getExpiresAt() != null ? dto.getExpiresAt() : null;
-
         if (longUrl == null || longUrl.isBlank()) {
             throw new RuntimeException("longUrl is required");
         }
@@ -68,6 +66,10 @@ public class Service {
 
         LocalDateTime expiresAt = dto.getExpiresAt();
 
+        if (expiresAt != null && expiresAt.isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("expiresAt must be in the future");
+        }
+
         Link link = new Link();
         link.setCode(code);
         link.setLongUrl(longUrl);
@@ -79,7 +81,7 @@ public class Service {
 
         return new ResponseDto(
                 savedLink.getCode(),
-                "http://localhost:8080/" + savedLink.getCode(),
+                "http://localhost:8080/api/" + savedLink.getCode(),
                 savedLink.getLongUrl(),
                 savedLink.getExpiresAt()
         );
@@ -112,7 +114,12 @@ public class Service {
         if (link.getExpiresAt() != null && link.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Link has expired");
         }
-        redisTemplate.opsForValue().set(key, link.getLongUrl());
+        if (link.getExpiresAt() != null) {
+            Duration ttl = Duration.between(LocalDateTime.now(), link.getExpiresAt());
+            redisTemplate.opsForValue().set(key, link.getLongUrl(), ttl);
+        } else {
+            redisTemplate.opsForValue().set(key, link.getLongUrl());
+        }
 
         return link.getLongUrl();
     }

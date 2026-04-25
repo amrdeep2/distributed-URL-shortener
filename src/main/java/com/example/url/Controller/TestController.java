@@ -30,7 +30,7 @@ public class TestController {
 
     }
 
-    @GetMapping("/{code}")
+    @GetMapping("/api/{code}")
     public ResponseEntity<Void> redirect(@PathVariable String code) {
 
         String longUrl = linkService.redirectLogic(code);
